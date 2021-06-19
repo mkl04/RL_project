@@ -58,7 +58,6 @@ if __name__ == '__main__':
         print("================================================")
         print("GAME ", e+1)
         
-        # for t in itertools.count():
         for t in range(1000000000000):
 
             if isinstance(obs[0], PytorchLazyFrames):
