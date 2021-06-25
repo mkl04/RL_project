@@ -6,6 +6,8 @@ from collections import deque
 import itertools
 import numpy as np
 import random
+import argparse
+import time
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -25,12 +27,7 @@ EPSILON_END=0.1
 EPSILON_DECAY=int(1e6) # 10k -> period to decrease from EPSILON_START to EPSILON_END linearly
 NUM_ENVS = 4 # number of steps for each gradient update
 TARGET_UPDATE_FREQ=10000 // NUM_ENVS # number of steps to say that target weights are equal to online weights 
-LR = 5e-5
-DDQN = True
-SAVE_PATH = './models/space_ddqn_{}.pack'.format(LR)
 SAVE_INTERVAL = 10000
-LOG_DIR = './logs_space/atari_double' + str(LR)
-
 LOG_INTERVAL = 1000
 
 def init_weights(m):
@@ -152,13 +149,33 @@ class Network(nn.Module):
         self.load_state_dict(params)
 
 if __name__ == '__main__':
-    device = torch.device('cuda:0' if torch.cuda.is_available() else "cpu")
 
-    make_env = lambda: Monitor(make_atari_deepmind('SpaceInvadersNoFrameskip-v4', scale_values=True), allow_early_resets=True)
+    parser = argparse.ArgumentParser(description = 'Say hello')
+    parser.add_argument('-gpu', help='number of gpu', default="0", type=str)
+    parser.add_argument('-game', help='options: tennis, space', default="space")
+    parser.add_argument('-agent', help='options: dqn, double', default="dqn")
+    parser.add_argument('-lr', help='learning rate', default=5e-5)
+    args = parser.parse_args()
 
-    # vec_env = DummyVecEnv([make_env for _ in range(NUM_ENVS)])  # in serie - for debugging
-    vec_env = SubprocVecEnv([make_env for _ in range(NUM_ENVS)])  # in parallel - for training
+    device = torch.device('cuda:' + args.gpu)
 
+    if args.game == "tennis":
+        atari_name = "Tennis"
+    if args.game == "space":
+        atari_name = "SpaceInvaders"
+
+    SAVE_PATH = './models/{}_{}_{}_gpu{}.pack'.format(args.game, args.agent, args.lr, args.gpu)
+    LOG_DIR = './logs_{}/{}_{}_gpu{}'.format(args.game, args.agent, args.lr, args.gpu)
+
+    if args.agent == "dqn":
+        DDQN=False
+    elif args.agent == "double":
+        DDQN=True
+    else:
+        print("Erro: No agent was identified")
+
+    make_env = lambda: Monitor(make_atari_deepmind(atari_name+'NoFrameskip-v4', scale_values=True), allow_early_resets=True)
+    vec_env = SubprocVecEnv([make_env for _ in range(NUM_ENVS)])
     env = BatchedPytorchFrameStack(vec_env, k=4)
 
     # Deque is preferred over list for quicker append and pop operations.
@@ -181,7 +198,7 @@ if __name__ == '__main__':
     # set same weights
     target_net.load_state_dict(online_net.state_dict())
 
-    optimizer = torch.optim.Adam(online_net.parameters(), lr=LR)
+    optimizer = torch.optim.Adam(online_net.parameters(), lr=args.lr)
 
     # Initialize Replay Buffer
     obses = env.reset()
@@ -198,7 +215,7 @@ if __name__ == '__main__':
 
     # Main Training Loop
     obses = env.reset()
-
+    start_time = time.time()
     for step in itertools.count(): # infinite counter
         epsilon = np.interp(step * NUM_ENVS, [0, EPSILON_DECAY], [EPSILON_START, EPSILON_END])
 
@@ -254,5 +271,10 @@ if __name__ == '__main__':
         if step % SAVE_INTERVAL == 0 and step !=0:
             print('Saving...')
             online_net.save(SAVE_PATH)
+        
+        if step == 1e6:
+            tmp = time.time() - start_time
+            print(args.gpu, tmp)
+            break
 
 
