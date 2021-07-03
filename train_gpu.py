@@ -26,7 +26,7 @@ EPSILON_START=1.0
 EPSILON_END=0.1
 EPSILON_DECAY=int(1e6) # 10k -> period to decrease from EPSILON_START to EPSILON_END linearly
 NUM_ENVS = 4 # number of steps for each gradient update
-TARGET_UPDATE_FREQ=10000 // NUM_ENVS # number of steps to say that target weights are equal to online weights 
+# TARGET_UPDATE_FREQ=20000 // NUM_ENVS # number of steps to say that target weights are equal to online weights 
 SAVE_INTERVAL = 10000
 LOG_INTERVAL = 1000
 
@@ -154,7 +154,8 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', help='number of gpu', default="0", type=str)
     parser.add_argument('-game', help='options: tennis, space', default="space")
     parser.add_argument('-agent', help='options: dqn, double', default="dqn")
-    parser.add_argument('-lr', help='learning rate', default=5e-5)
+    parser.add_argument('-lr', help='learning rate', default=5e-5, type=float) # 5e-5 // 25e-5
+    parser.add_argument('-tuf', help='target update frequency en k', default=10, type=int) # 10k // 20k
     args = parser.parse_args()
 
     device = torch.device('cuda:' + args.gpu)
@@ -164,8 +165,13 @@ if __name__ == '__main__':
     if args.game == "space":
         atari_name = "SpaceInvaders"
 
-    SAVE_PATH = './models/{}_{}_{}_gpu{}.pack'.format(args.game, args.agent, args.lr, args.gpu)
-    LOG_DIR = './logs_{}/{}_{}_gpu{}'.format(args.game, args.agent, args.lr, args.gpu)
+    if args.tuf == 10:
+        TARGET_UPDATE_FREQ=10000 // NUM_ENVS
+    elif args.tuf == 20:
+        TARGET_UPDATE_FREQ=20000 // NUM_ENVS
+
+    SAVE_PATH = './models/{}_{}_{}_{}k_gpu{}.pack'.format(args.game, args.agent, args.lr, args.tuf, args.gpu)
+    LOG_DIR = './logs_{}/{}_{}_{}k_gpu{}'.format(args.game, args.agent, args.lr, args.tuf, args.gpu)
 
     if args.agent == "dqn":
         DDQN=False
@@ -272,7 +278,7 @@ if __name__ == '__main__':
             print('Saving...')
             online_net.save(SAVE_PATH)
         
-        if step == 1e6:
+        if step == 2e6:
             tmp = time.time() - start_time
             print(args.gpu, tmp)
             break
