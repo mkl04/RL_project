@@ -24,6 +24,9 @@ if __name__ == '__main__':
     parser.add_argument('-game', help='options: tennis, space', default="space")
     parser.add_argument('-agent', help='options: dqn, double', default="dqn")
     parser.add_argument('-num_test', help='number of tests', default=3, type=int)
+    parser.add_argument('-gpu', help='number of gpu', default="0", type=str)
+    parser.add_argument('-lr', help='learning rate', default=5e-5, type=float) # 5e-5 // 25e-5
+    parser.add_argument('-tuf', help='target update frequency en k', default=10, type=int) # 10k // 20k
     args = parser.parse_args()
 
     if args.game == "tennis":
@@ -41,7 +44,8 @@ if __name__ == '__main__':
 
     net = Network(env, device)
     net = net.to(device)
-    net.load('./models/{}_{}.pack'.format(args.game, args.agent))
+    LOAD_PATH = './models2/{}_{}_{}_{}k_gpu{}.pack'.format(args.game, args.agent, args.lr, args.tuf, args.gpu)
+    net.load(LOAD_PATH)
 
     NUM_TEST = args.num_test
 
