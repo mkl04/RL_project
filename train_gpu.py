@@ -18,17 +18,17 @@ import msgpack
 from msgpack_numpy import patch as msgpack_numpy_patch
 msgpack_numpy_patch()
 
-GAMMA=0.99 # discount rate 
+GAMMA=0.99 
 BATCH_SIZE=32
-BUFFER_SIZE=int(1e6) # 50k -> maximum number of transitions we are going to store before overwritting all transitions
-MIN_REPLAY_SIZE=50000 # 1k -> maximum number of transitions before we start to train and compute gradients
+BUFFER_SIZE=int(1e6)
+MIN_REPLAY_SIZE=50000
 EPSILON_START=1.0
 EPSILON_END=0.1
-EPSILON_DECAY=int(1e6) # 10k -> period to decrease from EPSILON_START to EPSILON_END linearly
+EPSILON_DECAY=int(1e6)
 NUM_ENVS = 4 # number of steps for each gradient update
-# TARGET_UPDATE_FREQ=20000 // NUM_ENVS # number of steps to say that target weights are equal to online weights 
 SAVE_INTERVAL = 10000
 LOG_INTERVAL = 1000
+NUM_MAX_STEPS = 2e6
 
 def init_weights(m):
     if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
@@ -72,10 +72,10 @@ class Network(nn.Module):
 
     def act(self, obses, epsilon):
         obses_t = torch.as_tensor(obses, dtype=torch.float32, device=self.device)
-        q_values = self(obses_t) # forward
+        q_values = self(obses_t)
 
         max_q_indices = torch.argmax(q_values, dim=1) # batch_size = 4
-        actions = max_q_indices.detach().tolist() # Tensor to list of int
+        actions = max_q_indices.detach().tolist()
 
         for i in range(len(actions)):
             rnd_sample = random.random()
@@ -150,12 +150,12 @@ class Network(nn.Module):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description = 'Say hello')
+    parser = argparse.ArgumentParser(description = 'parameters for RL project')
     parser.add_argument('-gpu', help='number of gpu', default="0", type=str)
     parser.add_argument('-game', help='options: tennis, space', default="space")
     parser.add_argument('-agent', help='options: dqn, double', default="dqn")
-    parser.add_argument('-lr', help='learning rate', default=5e-5, type=float) # 5e-5 // 25e-5
-    parser.add_argument('-tuf', help='target update frequency en k', default=10, type=int) # 10k // 20k
+    parser.add_argument('-lr', help='learning rate, e.g 25e-5, 5e-5', default=25e-5, type=float)
+    parser.add_argument('-tuf', help='target update frequency en k, e.g 10, 20', default=10, type=int)
     args = parser.parse_args()
 
     device = torch.device('cuda:' + args.gpu)
@@ -278,9 +278,9 @@ if __name__ == '__main__':
             print('Saving...')
             online_net.save(SAVE_PATH)
         
-        if step == 2e6:
+        if step == NUM_MAX_STEPS:
             tmp = time.time() - start_time
-            print(args.gpu, tmp)
+            print("Finish in {}s".format(np.round(tmp, 4)))
             break
 
 
