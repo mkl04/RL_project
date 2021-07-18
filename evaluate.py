@@ -12,7 +12,7 @@ import msgpack
 from msgpack_numpy import patch as msgpack_numpy_patch
 msgpack_numpy_patch()
 
-from train import nature_cnn, Network
+from train_gpu import nature_cnn, Network
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
